@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { SCHEMA } from "./schema";
 
 /** Cliente com a sessão do usuário. RLS aplicada. Use no painel. */
 export async function criarClienteServidor() {
@@ -8,6 +9,7 @@ export async function criarClienteServidor() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      db: { schema: SCHEMA },
       cookies: {
         getAll: () => cookieStore.getAll(),
         setAll: (lista: { name: string; value: string; options: CookieOptions }[]) => {
@@ -28,6 +30,6 @@ export function criarClienteAnonimo() {
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } },
+    { db: { schema: SCHEMA }, cookies: { getAll: () => [], setAll: () => {} } },
   );
 }

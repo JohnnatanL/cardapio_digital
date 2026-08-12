@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { SCHEMA } from "./schema";
 
 /**
  * service_role: ignora RLS por completo.
@@ -8,6 +9,7 @@ export function criarClienteAdmin() {
   const chave = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!chave) throw new Error("SUPABASE_SERVICE_ROLE_KEY não configurada");
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, chave, {
+    db: { schema: SCHEMA },
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }

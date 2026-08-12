@@ -26,7 +26,7 @@ on conflict (id) do update set
 -- A primeira pasta é o tenant, e é isso que as policies verificam.
 -- =============================================================================
 
-create or replace function public.pode_escrever_no_bucket(caminho text)
+create or replace function cardapio.pode_escrever_no_bucket(caminho text)
 returns boolean
 language plpgsql stable security definer set search_path = public
 as $$
@@ -44,7 +44,7 @@ begin
     return false;
   end;
 
-  return public.is_member(tenant);
+  return cardapio.is_member(tenant);
 end;
 $$;
 
@@ -61,18 +61,18 @@ create policy "menu-images: membro envia"
   on storage.objects for insert to authenticated
   with check (
     bucket_id = 'menu-images'
-    and public.pode_escrever_no_bucket(name)
+    and cardapio.pode_escrever_no_bucket(name)
   );
 
 drop policy if exists "menu-images: membro substitui" on storage.objects;
 create policy "menu-images: membro substitui"
   on storage.objects for update to authenticated
-  using (bucket_id = 'menu-images' and public.pode_escrever_no_bucket(name));
+  using (bucket_id = 'menu-images' and cardapio.pode_escrever_no_bucket(name));
 
 drop policy if exists "menu-images: membro apaga" on storage.objects;
 create policy "menu-images: membro apaga"
   on storage.objects for delete to authenticated
-  using (bucket_id = 'menu-images' and public.pode_escrever_no_bucket(name));
+  using (bucket_id = 'menu-images' and cardapio.pode_escrever_no_bucket(name));
 
 -- =============================================================================
 -- Faxina: quando o prato sai, a imagem dele vira lixo no bucket.
@@ -80,17 +80,17 @@ create policy "menu-images: membro apaga"
 -- trigger travaria a transação numa chamada de rede.
 -- =============================================================================
 
-create table if not exists public.storage_lixo (
+create table if not exists cardapio.storage_lixo (
   id         bigserial primary key,
   caminho    text not null,
   criado_em  timestamptz not null default now(),
   apagado_em timestamptz
 );
 
-alter table public.storage_lixo enable row level security;
-revoke all on public.storage_lixo from anon, authenticated;
+alter table cardapio.storage_lixo enable row level security;
+revoke all on cardapio.storage_lixo from anon, authenticated;
 
-create or replace function public.enfileirar_imagem_orfa()
+create or replace function cardapio.enfileirar_imagem_orfa()
 returns trigger
 language plpgsql security definer set search_path = public
 as $$
@@ -103,7 +103,7 @@ begin
 
   if antiga is not null and antiga is distinct from nova then
     -- Guarda só o caminho relativo ao bucket
-    insert into public.storage_lixo (caminho)
+    insert into cardapio.storage_lixo (caminho)
     values (regexp_replace(antiga, '^.*/menu-images/', ''));
   end if;
 
@@ -111,10 +111,10 @@ begin
 end;
 $$;
 
-drop trigger if exists items_imagem_orfa on public.items;
+drop trigger if exists items_imagem_orfa on cardapio.items;
 create trigger items_imagem_orfa
-  after update of image_url or delete on public.items
-  for each row execute function public.enfileirar_imagem_orfa();
+  after update of image_url or delete on cardapio.items
+  for each row execute function cardapio.enfileirar_imagem_orfa();
 
 -- PENDÊNCIA: agendar a faxina com pg_cron, ou chamar de um cron da Vercel:
 --   select cron.schedule('faxina-imagens', '0 4 * * *', $$

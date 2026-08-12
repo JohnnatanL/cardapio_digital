@@ -12,14 +12,28 @@ Supabase (Postgres + Auth + Storage + RLS) · Mercado Pago
 
 ### 1. Banco
 
+Tudo vive no schema **`cardapio`**, não no `public`. Assim o mesmo projeto
+Supabase pode hospedar outros produtos sem colisão de nomes.
+
 No SQL Editor do Supabase, rode em ordem:
 
 ```
-supabase/001_schema.sql
+supabase/001_schema.sql          -- cria o schema cardapio
 supabase/002_rls_e_regras.sql
 supabase/003_seeds_e_onboarding.sql
 supabase/004_storage.sql
 ```
+
+### 1.1. Exponha o schema na API — **isso quebra tudo se faltar**
+
+No painel do Supabase: **Settings → API → Exposed schemas** → adicione
+`cardapio` e salve.
+
+Sem esse passo o PostgREST responde **404 em toda query**, inclusive nas RPCs,
+e o erro não diz que o problema é o schema. É a primeira coisa a conferir se
+nada funcionar depois do deploy.
+
+O nome do schema fica centralizado em `src/lib/supabase/schema.ts`.
 
 Depois configure a revalidação do cache:
 
@@ -57,6 +71,7 @@ npm run types
 
 | O quê | Onde |
 |---|---|
+| **Expor o schema `cardapio`** em Settings → API | painel do Supabase |
 | Chaves do Supabase e `SUPABASE_SERVICE_ROLE_KEY` | `.env.local` |
 | `REVALIDATE_SECRET` igual ao de `app_settings` | `.env.local` + SQL |
 | Token e IDs de plano do Mercado Pago | `.env.local` |
@@ -94,6 +109,8 @@ npm run types
 | Foto do prato | opcional, **sem placeholder** | caixa cinza vazia parece defeito; prato sem foto usa a largura toda |
 | Upload | comprime no navegador | dono fotografa com o celular e manda 5 MB |
 | Analytics | sem cookie, sem PII | LGPD sem banner |
+| Schema | `cardapio`, não `public` | um projeto Supabase, vários produtos |
+| `slugify` | `translate()` no lugar de `unaccent` | some com a dependência de extensão e o problema de `search_path` |
 
 ---
 

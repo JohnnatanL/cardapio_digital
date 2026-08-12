@@ -8,7 +8,7 @@
 -- app referencia, então evite mudar depois de ter cliente.
 -- =============================================================================
 
-insert into public.plans
+insert into cardapio.plans
   (code, name, tagline, price_cents, interval, trial_days,
    max_menus, max_items, max_tables, max_locales, features, sort_order)
 values
@@ -42,7 +42,7 @@ on conflict (code) do update set
 -- 'icon' = nome do componente em lucide-react.
 -- =============================================================================
 
-insert into public.tags (restaurant_id, slug, label, kind, icon, color, is_regulated, sort_order)
+insert into cardapio.tags (restaurant_id, slug, label, kind, icon, color, is_regulated, sort_order)
 values
   -- ---- Alergênicos regulados ----
   (null, 'gluten',
@@ -111,18 +111,18 @@ on conflict do nothing;
 -- existe membership, então a RLS de memberships não teria como validar.
 -- =============================================================================
 
-create or replace function public.check_slug_available(p_slug text)
+create or replace function cardapio.check_slug_available(p_slug text)
 returns boolean
 language sql stable security definer set search_path = public
 as $$
-  select not exists (select 1 from public.restaurants where slug = p_slug)
+  select not exists (select 1 from cardapio.restaurants where slug = p_slug)
 $$;
 
-revoke all on function public.check_slug_available(text) from public;
-grant execute on function public.check_slug_available(text) to anon, authenticated;
+revoke all on function cardapio.check_slug_available(text) from public;
+grant execute on function cardapio.check_slug_available(text) to anon, authenticated;
 
 
-create or replace function public.create_restaurant(
+create or replace function cardapio.create_restaurant(
   p_name      text,
   p_slug      text,
   p_plan_code text default 'essencial'
@@ -133,7 +133,7 @@ as $$
 declare
   uid       uuid := auth.uid();
   new_id    uuid;
-  plan_row  public.plans;
+  plan_row  cardapio.plans;
   new_menu  uuid;
   d         smallint;
 begin
@@ -141,23 +141,23 @@ begin
     raise exception 'Não autenticado' using errcode = '42501';
   end if;
 
-  select * into plan_row from public.plans where code = p_plan_code and is_public;
+  select * into plan_row from cardapio.plans where code = p_plan_code and is_public;
   if plan_row is null then
     raise exception 'Plano inválido: %', p_plan_code using errcode = '22023';
   end if;
 
-  insert into public.restaurants (name, slug, created_by)
+  insert into cardapio.restaurants (name, slug, created_by)
   values (p_name, p_slug, uid)
   returning id into new_id;
 
-  insert into public.memberships (restaurant_id, user_id, role)
+  insert into cardapio.memberships (restaurant_id, user_id, role)
   values (new_id, uid, 'owner');
 
-  insert into public.subscriptions
+  insert into cardapio.subscriptions
     (restaurant_id, plan_id, status, trial_ends_at, current_period_start, current_period_end)
   values (
     new_id, plan_row.id,
-    (case when plan_row.trial_days > 0 then 'trialing' else 'active' end)::public.subscription_status,
+    (case when plan_row.trial_days > 0 then 'trialing' else 'active' end)::cardapio.subscription_status,
     case when plan_row.trial_days > 0 then now() + (plan_row.trial_days || ' days')::interval end,
     now(),
     now() + case when plan_row.trial_days > 0
@@ -166,17 +166,17 @@ begin
   );
 
   -- Cardápio principal já criado e ativo nos 7 dias: onboarding sem tela em branco.
-  insert into public.menus (restaurant_id, slug, name)
+  insert into cardapio.menus (restaurant_id, slug, name)
   values (new_id, 'principal',
           jsonb_build_object('pt-BR', 'Cardápio Principal', 'en', 'Main Menu'))
   returning id into new_menu;
 
   for d in 0..6 loop
-    insert into public.menu_days (menu_id, weekday) values (new_menu, d);
+    insert into cardapio.menu_days (menu_id, weekday) values (new_menu, d);
   end loop;
 
   -- Categorias iniciais (o dono renomeia/apaga à vontade)
-  insert into public.categories (restaurant_id, name, icon, sort_order)
+  insert into cardapio.categories (restaurant_id, name, icon, sort_order)
   values
     (new_id, '{"pt-BR":"Entradas","en":"Starters"}'::jsonb,  'Soup',        10),
     (new_id, '{"pt-BR":"Pratos principais","en":"Mains"}'::jsonb, 'UtensilsCrossed', 20),
@@ -187,32 +187,32 @@ begin
 end;
 $$;
 
-revoke all on function public.create_restaurant(text, text, text) from public;
-grant execute on function public.create_restaurant(text, text, text) to authenticated;
+revoke all on function cardapio.create_restaurant(text, text, text) from public;
+grant execute on function cardapio.create_restaurant(text, text, text) to authenticated;
 
 -- =============================================================================
 -- ANALYTICS: agregados prontos pro painel
 -- =============================================================================
 
-create or replace function public.analytics_summary(
+create or replace function cardapio.analytics_summary(
   p_restaurant uuid,
   p_days       int default 30
 )
 returns jsonb
 language sql stable security definer set search_path = public
 as $$
-  select case when not public.is_member(p_restaurant) then null else jsonb_build_object(
+  select case when not cardapio.is_member(p_restaurant) then null else jsonb_build_object(
     'periodo_dias', p_days,
     'total_visitas', (
-      select count(*) from public.menu_events e
+      select count(*) from cardapio.menu_events e
       where e.restaurant_id = p_restaurant and e.event_type = 'menu_view'
         and e.created_at > now() - (p_days || ' days')::interval
     ),
     'itens_mais_vistos', (
       select coalesce(jsonb_agg(x), '[]'::jsonb) from (
         select i.id, i.name, count(*) as views
-        from public.menu_events e
-        join public.items i on i.id = e.item_id
+        from cardapio.menu_events e
+        join cardapio.items i on i.id = e.item_id
         where e.restaurant_id = p_restaurant and e.event_type = 'item_view'
           and e.created_at > now() - (p_days || ' days')::interval
         group by i.id, i.name order by count(*) desc limit 15
@@ -225,8 +225,8 @@ as $$
       from (
         select extract(hour from e.created_at at time zone r.timezone)::int as hora,
                count(*) as visitas
-        from public.menu_events e
-        join public.restaurants r on r.id = e.restaurant_id
+        from cardapio.menu_events e
+        join cardapio.restaurants r on r.id = e.restaurant_id
         where e.restaurant_id = p_restaurant and e.event_type = 'menu_view'
           and e.created_at > now() - (p_days || ' days')::interval
         group by 1
@@ -236,7 +236,7 @@ as $$
     'filtros_usados', (
       select coalesce(jsonb_agg(x), '[]'::jsonb) from (
         select e.meta ->> 'tag_slug' as tag, count(*) as usos
-        from public.menu_events e
+        from cardapio.menu_events e
         where e.restaurant_id = p_restaurant and e.event_type = 'filter_use'
           and e.created_at > now() - (p_days || ' days')::interval
           and e.meta ? 'tag_slug'
@@ -246,8 +246,8 @@ as $$
     'mesas_mais_ativas', (
       select coalesce(jsonb_agg(x), '[]'::jsonb) from (
         select t.label, count(*) as scans
-        from public.menu_events e
-        join public.restaurant_tables t on t.id = e.table_id
+        from cardapio.menu_events e
+        join cardapio.restaurant_tables t on t.id = e.table_id
         where e.restaurant_id = p_restaurant and e.event_type = 'qr_scan'
           and e.created_at > now() - (p_days || ' days')::interval
         group by t.label order by count(*) desc limit 10
@@ -256,5 +256,5 @@ as $$
   ) end
 $$;
 
-revoke all on function public.analytics_summary(uuid, int) from public;
-grant execute on function public.analytics_summary(uuid, int) to authenticated;
+revoke all on function cardapio.analytics_summary(uuid, int) from public;
+grant execute on function cardapio.analytics_summary(uuid, int) to authenticated;
