@@ -1,0 +1,238 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   COMANDA — sistema visual
+   A comanda de cozinha é o artefato mais característico do mundo do
+   restaurante. Dela vem tudo: o líder pontilhado, os numerais tabulares,
+   o papel mineral, a régua de tinta.
+   ========================================================================== */
+
+@theme {
+  /* ---- Cor: produto (landing + painel) ---- */
+  --color-papel:      #F2F4EF;  /* papel mineral, levemente esverdeado */
+  --color-papel-alt:  #E7EBE4;  /* superfície recuada */
+  --color-tinta:      #10201F;  /* quase-preto com viés petróleo */
+  --color-petroleo:   #0E3B39;  /* superfícies escuras, rodapé, nav */
+  --color-petroleo-2: #17524F;  /* hover sobre petróleo */
+  --color-mostarda:   #E0A32E;  /* ação primária, destaque */
+  --color-mostarda-2: #C88A1C;  /* hover */
+  --color-brasa:      #C2352A;  /* só alerta: esgotado, erro, limite */
+  --color-musgo:      #5E7C63;  /* tags de dieta, estados calmos */
+  --color-fumaca:     #6B7772;  /* texto secundário */
+  --color-risco:      #C9D0C7;  /* hairlines, divisores */
+
+  /* ---- Tipografia ---- */
+  --font-display: "Instrument Serif", ui-serif, Georgia, serif;
+  --font-corpo:   "Inter Tight", ui-sans-serif, system-ui, sans-serif;
+  --font-numero:  "DM Mono", ui-monospace, "SF Mono", monospace;
+
+  /* ---- Escala tipográfica ---- */
+  --text-eyebrow:   0.6875rem;  /* 11px, uppercase, tracking largo */
+  --text-mini:      0.75rem;    /* 12px — descrição do prato */
+  --text-base:      0.9375rem;  /* 15px */
+  --text-prato:     1.0625rem;  /* 17px — nome do prato */
+  --text-secao:     1.5rem;
+  --text-titulo:    2.25rem;
+  --text-hero:      clamp(2.5rem, 8vw, 5.25rem);
+
+  --radius-card: 4px;   /* comanda não tem canto redondo generoso */
+  --radius-chip: 999px;
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
+:root { color-scheme: light; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  background: var(--color-papel);
+  color: var(--color-tinta);
+  font-family: var(--font-corpo);
+  font-size: var(--text-base);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection { background: var(--color-mostarda); color: var(--color-tinta); }
+
+/* Foco visível sempre — requisito, não enfeite */
+:focus-visible {
+  outline: 2px solid var(--color-petroleo);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ==========================================================================
+   ASSINATURA: o líder pontilhado da comanda
+   Nome do prato .......................... R$ 38,00
+   Feito com flexbox + border-bottom dotted num spacer, que é a única
+   técnica que sobrevive a quebra de linha e a zoom de acessibilidade.
+   ========================================================================== */
+
+.leader {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  width: 100%;
+}
+.leader > .leader-fill {
+  flex: 1 1 auto;
+  min-width: 1.5rem;
+  align-self: flex-end;
+  height: 0.3125rem;
+  margin-bottom: 0.1875rem;
+  background-image: radial-gradient(
+    circle at center,
+    currentColor 0 1.05px,
+    transparent 1.05px
+  );
+  background-size: 5px 5px;
+  background-repeat: repeat-x;
+  background-position: bottom;
+  opacity: 0.3;
+}
+.leader > .leader-price {
+  flex: 0 0 auto;
+  font-family: var(--font-numero);
+  font-feature-settings: "tnum" 1;   /* numerais tabulares: preços alinham */
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  word-spacing: -0.18em;
+  white-space: nowrap;
+}
+
+/* Régua de tinta: divisor que abre seções, ecoando o corte da comanda */
+.regua {
+  height: 2px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--color-tinta) 0 10px,
+    transparent 10px 16px
+  );
+  opacity: 0.35;
+}
+
+/* Eyebrow: rótulo estrutural. Só usar quando rotula algo de verdade. */
+.eyebrow {
+  font-family: var(--font-numero);
+  font-size: var(--text-eyebrow);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--color-fumaca);
+}
+
+/* ==========================================================================
+   Componentes recorrentes
+   ========================================================================== */
+
+.card-comanda {
+  background: #fff;
+  border: 1px solid var(--color-risco);
+  border-radius: var(--radius-card);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  border-radius: var(--radius-card);
+  padding: 0.6875rem 1.125rem;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+  cursor: pointer;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-primario   { background: var(--color-mostarda); color: var(--color-tinta); }
+.btn-primario:hover:not(:disabled) { background: var(--color-mostarda-2); }
+
+.btn-escuro     { background: var(--color-petroleo); color: var(--color-papel); }
+.btn-escuro:hover:not(:disabled) { background: var(--color-petroleo-2); }
+
+.btn-fantasma   { background: transparent; color: var(--color-tinta); border: 1px solid var(--color-risco); }
+.btn-fantasma:hover:not(:disabled) { border-color: var(--color-tinta); }
+
+.campo {
+  width: 100%;
+  background: #fff;
+  border: 1px solid var(--color-risco);
+  border-radius: var(--radius-card);
+  padding: 0.625rem 0.75rem;
+  font-size: var(--text-base);
+  color: var(--color-tinta);
+}
+.campo::placeholder { color: var(--color-fumaca); }
+.campo:focus { outline: 2px solid var(--color-petroleo); outline-offset: -1px; border-color: transparent; }
+
+/* Chip de tag / filtro */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--color-risco);
+  padding: 0.25rem 0.625rem;
+  font-size: var(--text-mini);
+  background: #fff;
+  transition: all 140ms ease;
+  cursor: pointer;
+}
+.chip[data-ativo="true"] {
+  background: var(--color-petroleo);
+  border-color: var(--color-petroleo);
+  color: var(--color-papel);
+}
+
+/* Item esgotado: dessatura sem esconder — o cliente precisa saber que existe */
+.esgotado {
+  opacity: 0.45;
+  filter: saturate(0.15);
+}
+.esgotado .leader-price { text-decoration: line-through; }
+
+/* ==========================================================================
+   Movimento — discreto e sempre cancelável
+   ========================================================================== */
+
+@keyframes sobe {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+.anim-sobe { animation: sobe 520ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================================================
+   Temas do cardápio público (o dono escolhe no painel)
+   Escopo em [data-tema] para não vazar no painel.
+   ========================================================================== */
+
+[data-tema="terracota"] {
+  --m-fundo: #FBF7F2; --m-tinta: #2A1D15; --m-destaque: #A8501E; --m-suave: #8A7663;
+}
+[data-tema="vinho"] {
+  --m-fundo: #FAF6F6; --m-tinta: #2B1418; --m-destaque: #8C2233; --m-suave: #8A6E72;
+}
+[data-tema="oliva"] {
+  --m-fundo: #F6F7F0; --m-tinta: #1E2416; --m-destaque: #4D6B22; --m-suave: #767C63;
+}
+[data-tema="noturno"] {
+  --m-fundo: #14161A; --m-tinta: #F0EFEA; --m-destaque: #E0A32E; --m-suave: #8C9096;
+  color-scheme: dark;
+}
+
+.tema-superficie { background: var(--m-fundo); color: var(--m-tinta); }
+.tema-destaque   { color: var(--m-destaque); }
+.tema-suave      { color: var(--m-suave); }
