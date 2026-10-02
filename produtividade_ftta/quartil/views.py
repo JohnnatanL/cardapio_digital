@@ -6,6 +6,7 @@ from django.shortcuts import render
 from django.utils import timezone
 
 from . import services
+from .excel import gerar_xlsx
 
 log = logging.getLogger(__name__)
 
@@ -37,11 +38,13 @@ def index(request):
     if quartil:
         df = df[df["quartil"] == quartil]
 
-    if request.GET.get("formato") == "csv":
-        resp = HttpResponse(content_type="text/csv; charset=utf-8")
-        resp["Content-Disposition"] = f'attachment; filename="quartil_{mes:%Y_%m}.csv"'
-        resp.write("﻿")  # BOM para o Excel abrir com acento
-        df.assign(produtividade=df["produtividade"].round(4)).to_csv(resp, index=False, sep=";", decimal=",")
+    if request.GET.get("formato") == "xlsx":
+        # Sempre a base inteira: o quartil depende de todos os vendedores.
+        # No Excel, o gestor se filtra pelo autofiltro da aba Vendedores.
+        conteudo = gerar_xlsx(dados["vendedores"], dados["sem_hierarquia"],
+                              dados["du_acc"], dados["dia_referencia"], mes)
+        resp = HttpResponse(conteudo, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        resp["Content-Disposition"] = f'attachment; filename="quartil_{mes:%Y_%m}.xlsx"'
         return resp
 
     contexto.update({

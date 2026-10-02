@@ -23,7 +23,9 @@ O cruzamento é `username + "@alloha.com" = email_vendedor` (sem diferenciar mai
   as contagens podem não bater exatamente 25%.
 - O quartil é calculado sobre **todos** os consultores; o filtro de gestor só recorta a tabela.
 - Vendas com e-mail que não está na hierarquia do mês aparecem num bloco recolhível no fim da página.
-- Botão **Baixar CSV** exporta o que está filtrado (`;` e vírgula decimal, abre direto no Excel).
+- Botão **Baixar Excel** gera um .xlsx com as abas *Resumo*, *Vendedores* e *Fora da hierarquia*.
+  Produtividade, ranking e quartil são fórmulas sobre a célula `du_acc` (amarela): mudou o valor,
+  tudo recalcula. Sai sempre a base inteira; o gestor se filtra pelo autofiltro.
 
 ## Rodar local
 

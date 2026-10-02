@@ -76,11 +76,19 @@ class PaginaTests(SimpleTestCase):
         self.assertContains(resp, "intruso@alloha.com")
         services.buscar_du_acc.assert_called_with(dt.date(2026, 9, 30))
 
-    def test_filtro_gestor_e_csv(self):
-        resp = self.client.get("/?mes=2026-09&gestor=gestor.b&formato=csv")
-        corpo = resp.content.decode("utf-8-sig")
-        self.assertIn("caio", corpo)
-        self.assertNotIn("ana", corpo)
+    def test_excel(self):
+        import io
+        from openpyxl import load_workbook
+        resp = self.client.get("/?mes=2026-09&gestor=gestor.b&formato=xlsx")
+        self.assertEqual(resp.status_code, 200)
+        wb = load_workbook(io.BytesIO(resp.content))
+        self.assertEqual(wb.sheetnames, ["Resumo", "Vendedores", "Fora da hierarquia"])
+        ws = wb["Vendedores"]
+        nomes = [ws.cell(row=r, column=2).value for r in range(6, ws.max_row + 1)]
+        self.assertEqual(len(nomes), 6)  # base inteira, ignora o filtro de gestor
+        self.assertEqual(ws["B3"].value, 10.0)
+        self.assertEqual(ws["E6"].value, "=IF($B$3>0,D6/$B$3,0)")
+        self.assertEqual(wb["Fora da hierarquia"]["A4"].value, "intruso@alloha.com")
 
     def test_erro_vira_mensagem(self):
         services.buscar_du_acc.side_effect = ValueError("dim_calendario sem du_acc")

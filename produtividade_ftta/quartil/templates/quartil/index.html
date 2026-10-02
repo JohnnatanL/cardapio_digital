@@ -51,7 +51,7 @@
     </label>
     {% if quartil %}<input type="hidden" name="quartil" value="{{ quartil }}">{% endif %}
     <button type="submit">Filtrar</button>
-    {% if not erro %}<a class="btn" href="?mes={{ mes|date:'Y-m' }}&gestor={{ gestor|urlencode }}&quartil={{ quartil }}&formato=csv">Baixar CSV</a>{% endif %}
+    {% if not erro %}<a class="btn" href="?mes={{ mes|date:'Y-m' }}&formato=xlsx">Baixar Excel</a>{% endif %}
   </form>
 
   {% if erro %}
