@@ -1,0 +1,8 @@
+django>=5.0,<6
+pandas>=2.0
+gunicorn>=22
+# Drivers usados pelo seu auth.py (conecta_altovalor / conecta_databricks).
+# Ajuste para os que você já usa no ETL:
+databricks-sql-connector>=3.0
+# psycopg2-binary   # se o altovalor for Postgres/Supabase
+# pymysql           # se o altovalor for MySQL

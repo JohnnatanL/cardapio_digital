@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quartil de Produtividade FTTA</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --tx:#1d2330; --mut:#6b7385; --bd:#e3e6ec;
+          --q1:#1a7f4b; --q2:#5a9e2f; --q3:#d08a10; --q4:#c0392b; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--tx); }
+  main { max-width:1100px; margin:0 auto; padding:24px 16px 48px; }
+  h1 { font-size:1.4rem; margin:0 0 4px; }
+  .sub { color:var(--mut); margin:0 0 20px; font-size:.9rem; }
+  form.filtros { display:flex; flex-wrap:wrap; gap:12px; align-items:end; margin-bottom:20px; }
+  label { display:flex; flex-direction:column; font-size:.8rem; color:var(--mut); gap:4px; }
+  input, select, button, a.btn { font:inherit; padding:7px 10px; border:1px solid var(--bd); border-radius:6px; background:#fff; color:var(--tx); text-decoration:none; }
+  button { background:var(--tx); color:#fff; border-color:var(--tx); cursor:pointer; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-bottom:24px; }
+  .card { background:var(--card); border:1px solid var(--bd); border-left:5px solid; border-radius:8px; padding:14px; text-decoration:none; color:inherit; }
+  .card.ativo { outline:2px solid var(--tx); }
+  .card h2 { margin:0 0 6px; font-size:1rem; display:flex; justify-content:space-between; }
+  .card .big { font-size:1.5rem; font-weight:600; }
+  .card small { color:var(--mut); display:block; margin-top:4px; }
+  .Q1 { border-color:var(--q1); } .Q2 { border-color:var(--q2); } .Q3 { border-color:var(--q3); } .Q4 { border-color:var(--q4); }
+  .tag { display:inline-block; padding:2px 8px; border-radius:10px; color:#fff; font-size:.75rem; font-weight:600; }
+  .tag.Q1 { background:var(--q1); } .tag.Q2 { background:var(--q2); } .tag.Q3 { background:var(--q3); } .tag.Q4 { background:var(--q4); }
+  .tabela { overflow-x:auto; background:var(--card); border:1px solid var(--bd); border-radius:8px; }
+  table { border-collapse:collapse; width:100%; font-size:.9rem; }
+  th, td { padding:8px 12px; border-bottom:1px solid var(--bd); text-align:left; white-space:nowrap; }
+  th { background:#fafbfc; font-size:.75rem; text-transform:uppercase; color:var(--mut); }
+  td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
+  .erro { background:#fdecea; border:1px solid #f5c2bc; color:#8a1c11; padding:12px 16px; border-radius:8px; }
+  details { margin-top:24px; }
+  summary { cursor:pointer; color:var(--mut); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Quartil de produtividade — vendas FTTA</h1>
+  <p class="sub">Produtividade = vendas no mês ÷ dias úteis acumulados (du_acc).
+    {% if du_acc %}Referência: {{ dia_referencia|date:"d/m/Y" }} · <strong>du_acc = {{ du_acc|floatformat:0 }}</strong> · {{ total_vendedores }} vendedores{% endif %}</p>
+
+  <form class="filtros" method="get">
+    <label>Mês <input type="month" name="mes" value="{{ mes|date:'Y-m' }}" max="{{ mes_max }}"></label>
+    <label>Gestor
+      <select name="gestor">
+        <option value="">Todos</option>
+        {% for g in gestores %}<option value="{{ g }}"{% if g == gestor %} selected{% endif %}>{{ g }}</option>{% endfor %}
+      </select>
+    </label>
+    {% if quartil %}<input type="hidden" name="quartil" value="{{ quartil }}">{% endif %}
+    <button type="submit">Filtrar</button>
+    {% if not erro %}<a class="btn" href="?mes={{ mes|date:'Y-m' }}&gestor={{ gestor|urlencode }}&quartil={{ quartil }}&formato=csv">Baixar CSV</a>{% endif %}
+  </form>
+
+  {% if erro %}
+    <div class="erro"><strong>Não foi possível carregar os dados.</strong><br>{{ erro }}</div>
+  {% else %}
+    <div class="cards">
+      {% for r in resumo %}
+        <a class="card {{ r.quartil }}{% if r.quartil == quartil %} ativo{% endif %}"
+           href="?mes={{ mes|date:'Y-m' }}&gestor={{ gestor|urlencode }}{% if r.quartil != quartil %}&quartil={{ r.quartil }}{% endif %}">
+          <h2>{{ r.quartil }} <span>{{ r.vendedores }} vend.</span></h2>
+          {% if r.vendedores %}
+            <div class="big">{{ r.prod_media|floatformat:2 }}</div>
+            <small>média vendas/DU · faixa {{ r.prod_min|floatformat:2 }} – {{ r.prod_max|floatformat:2 }}</small>
+            <small>{{ r.vendas }} vendas no quartil</small>
+          {% else %}<small>sem vendedores</small>{% endif %}
+        </a>
+      {% endfor %}
+    </div>
+
+    <div class="tabela">
+      <table>
+        <thead><tr>
+          <th class="num">#</th><th>Vendedor</th><th>Gestor</th>
+          <th class="num">Vendas</th><th class="num">Vendas / DU</th><th>Quartil</th>
+        </tr></thead>
+        <tbody>
+        {% for l in linhas %}
+          <tr>
+            <td class="num">{{ l.posicao }}</td>
+            <td>{{ l.username }}</td>
+            <td>{{ l.gestor_direto|default:"—" }}</td>
+            <td class="num">{{ l.vendas }}</td>
+            <td class="num">{{ l.produtividade|floatformat:2 }}</td>
+            <td><span class="tag {{ l.quartil }}">{{ l.quartil }}</span></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6">Nenhum vendedor para os filtros escolhidos.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if sem_hierarquia %}
+      <details>
+        <summary>{{ sem_hierarquia|length }} e-mail(s) com venda que não estão na hierarquia do mês</summary>
+        <div class="tabela" style="margin-top:8px">
+          <table>
+            <thead><tr><th>E-mail vendedor</th><th class="num">Vendas</th></tr></thead>
+            <tbody>{% for s in sem_hierarquia %}<tr><td>{{ s.email }}</td><td class="num">{{ s.vendas|floatformat:0 }}</td></tr>{% endfor %}</tbody>
+          </table>
+        </div>
+      </details>
+    {% endif %}
+  {% endif %}
+</main>
+</body>
+</html>

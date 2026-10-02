@@ -1,0 +1,13 @@
+[Unit]
+Description=Quartil de produtividade FTTA (Django/gunicorn)
+After=network.target
+
+[Service]
+User=www-data
+WorkingDirectory=/opt/produtividade_ftta
+EnvironmentFile=/opt/produtividade_ftta/.env
+ExecStart=/opt/produtividade_ftta/.venv/bin/gunicorn config.wsgi:application --bind 127.0.0.1:8001 --workers 1 --threads 4 --timeout 180
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
